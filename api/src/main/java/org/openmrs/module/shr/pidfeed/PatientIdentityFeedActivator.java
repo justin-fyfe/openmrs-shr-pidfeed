@@ -13,29 +13,76 @@
  */
 package org.openmrs.module.shr.pidfeed;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.module.Activator;
+import org.openmrs.module.ModuleActivator;
+import org.openmrs.module.shr.pidfeed.mllp.MllpCommunicationHost;
 
 /**
  * This class contains the logic that is run every time this module is either started or shutdown
  */
-public class PatientIdentityFeedActivator implements Activator {
+public class PatientIdentityFeedActivator implements ModuleActivator {
 	
 	private Log log = LogFactory.getLog(this.getClass());
+	private MllpCommunicationHost m_server = new MllpCommunicationHost();
 	
 	/**
-	 * @see org.openmrs.module.Activator#startup()
+	 * @see ModuleActivator#contextRefreshed()
 	 */
-	public void startup() {
-		log.info("Starting Basic Module");
+	public void contextRefreshed() {
+		log.info("SHR PID Feed Module refreshed");
 	}
 	
 	/**
-	 * @see org.openmrs.module.Activator#shutdown()
+	 * @see ModuleActivator#started()
 	 */
-	public void shutdown() {
-		log.info("Shutting down Basic Module");
+	public void started() {
+		try {
+	        this.m_server.open();
+        }
+        catch (IOException e) {
+	        // TODO Auto-generated catch block
+	        log.error("Error generated", e);
+        }
+		log.info("SHR PID Feed  Module started");
+	}
+	
+	/**
+	 * @see ModuleActivator#stopped()
+	 */
+	public void stopped() {
+		try {
+	        this.m_server.close();
+        }
+        catch (IOException e) {
+	        // TODO Auto-generated catch block
+	        log.error("Error generated", e);
+        }
+		log.info("SHR PID Feed  Module stopped");
+	}
+	
+	/**
+	 * @see ModuleActivator#willRefreshContext()
+	 */
+	public void willRefreshContext() {
+		log.info("Refreshing SHR PID Feed  Module");
+	}
+	
+	/**
+	 * @see ModuleActivator#willStart()
+	 */
+	public void willStart() {
+		log.info("Starting SHR PID Feed  Module");
+	}
+	
+	/**
+	 * @see ModuleActivator#willStop()
+	 */
+	public void willStop() {
+		log.info("Stopping SHR PID Feed  Module");
 	}
 	
 }

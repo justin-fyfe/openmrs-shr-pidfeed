@@ -46,6 +46,23 @@
 			<artifactId>openmrs-test</artifactId>
 			<type>pom</type>
 		</dependency>
+		
+		
+		<!--  RHEA SHR Adapter  -->
+		<dependency>
+			<groupId>org.openmrs.module</groupId>
+			<artifactId>rheashradapter-api</artifactId>
+			<version>1.0-SNAPSHOT</version>
+			<type>jar</type>
+		</dependency>
+		
+		<!--  CDA Import -->
+		<dependency>
+			<groupId>org.openmrs.module</groupId>
+			<artifactId>shr-cdahandler-api</artifactId>
+			<version>0.5.0</version>
+			<type>jar</type>
+		</dependency>
 	</dependencies>
 	
 	<build>
