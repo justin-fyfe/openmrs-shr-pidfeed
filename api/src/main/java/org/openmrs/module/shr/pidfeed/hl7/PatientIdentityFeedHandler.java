@@ -18,16 +18,13 @@ import org.openmrs.PersonName;
 import org.openmrs.api.PatientIdentifierException;
 import org.openmrs.api.context.Context;
 import org.openmrs.hl7.HL7Service;
-import org.openmrs.hl7.HL7Util;
 import org.openmrs.module.rheashradapter.api.PatientMergeService;
-import org.openmrs.module.shr.cdahandler.configuration.CdaHandlerConfiguration;
+import org.openmrs.module.shr.pidfeed.configuration.PatientIdentityFeedConfiguration;
 import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.validator.PatientIdentifierValidator;
 
 import ca.uhn.hl7v2.HL7Exception;
 import ca.uhn.hl7v2.app.Application;
-import ca.uhn.hl7v2.app.ApplicationException;
-import ca.uhn.hl7v2.model.DataTypeException;
 import ca.uhn.hl7v2.model.Message;
 import ca.uhn.hl7v2.model.v231.datatype.CX;
 import ca.uhn.hl7v2.model.v231.datatype.TS;
@@ -46,9 +43,9 @@ public class PatientIdentityFeedHandler implements Application {
 	
 	private final Log log = LogFactory.getLog(this.getClass());
 	
-	private final HL7Service m_hl7Service = Context.getHL7Service();
-	private final PatientMergeService m_mergeService = Context.getService(PatientMergeService.class);
-	private final CdaHandlerConfiguration m_cdaConfiguration = CdaHandlerConfiguration.getInstance();
+	private HL7Service m_hl7Service = null;
+	private PatientMergeService m_mergeService = null;
+	private PatientIdentityFeedConfiguration m_configuration = null;
 	
 	private static final List<String> m_handles = Arrays.asList("ADT^A01", "ADT^A02", "ADT^A04", "ADT^A08", "ADT^A40");
 	
@@ -73,61 +70,100 @@ public class PatientIdentityFeedHandler implements Application {
 	 * Process the message
 	 * @see ca.uhn.hl7v2.app.Application#processMessage(ca.uhn.hl7v2.model.Message)
 	 */
-	public Message processMessage(Message message) throws ApplicationException, HL7Exception {
+	public Message processMessage(Message message) {
 
-		// Now determine the message
-		if(message instanceof ADT_A01)
+		try
 		{
-			ADT_A01 adt = (ADT_A01)message;
-			// TODO: Create the person or update them
-			Person resolvedPerson = this.m_hl7Service.resolvePersonFromIdentifiers(this.convertCxList(adt.getPID().getAlternatePatientIDPID()));
+			if(this.m_configuration == null)
+				this.m_configuration = PatientIdentityFeedConfiguration.getInstance();
+			if(this.m_hl7Service == null)
+				this.m_hl7Service = Context.getHL7Service();
+			if(this.m_mergeService == null)
+				this.m_mergeService = Context.getService(PatientMergeService.class);
 			
-			// Person exists?
-			if(resolvedPerson == null && adt.getMSH().getMessageType().getTriggerEvent().equals("A08"))
-				return this.createErrorMessage("204", "Patient does not exist", adt);
-			
-			// Set the attributes of the person from the message
-			PID pid = adt.getPID();
-			this.updatedPatientFromPID(resolvedPerson, pid);
-			
-			return this.createAck(message);
-		}
-		else if(message instanceof ADT_A40)
-		{
-			ADT_A40 adt = (ADT_A40)message;
-			
-			// Merge
-			for(int i = 0; i < adt.getPIDPD1MRGPV1Reps(); i++)
+			// Now determine the message
+			if(message instanceof ADT_A01)
 			{
-				ADT_A40_PIDPD1MRGPV1 mrgPid = adt.getPIDPD1MRGPV1(i);
-
-				// Resolve the survivor
-				Person resolvedSurvivor = this.m_hl7Service.resolvePersonFromIdentifiers(this.convertCxList(mrgPid.getPID().getAlternatePatientIDPID()));
+				ADT_A01 adt = (ADT_A01)message;
+				// TODO: Create the person or update them
+				Person resolvedPerson = this.resolvePersonFromIdentifiers(adt.getPID().getPatientIdentifierList());
 				
 				// Person exists?
-				if(resolvedSurvivor == null )
+				if(resolvedPerson == null && adt.getMSH().getMessageType().getTriggerEvent().equals("A08"))
 					return this.createErrorMessage("204", "Patient does not exist", adt);
 				
-				// Resolve the victim
-				Person victim = this.m_hl7Service.resolvePersonFromIdentifiers(this.convertCxList(mrgPid.getMRG().getPriorAlternatePatientID()));
-				if(victim == null)
-					return this.createErrorMessage("204", "Patient in MRG does not exist", adt);
+				// Set the attributes of the person from the message
+				PID pid = adt.getPID();
+				this.updatedPatientFromPID(resolvedPerson, pid);
 				
-				// Merge the victim with survivor
-				try {
-	                this.m_mergeService.mergePatients(Context.getPatientService().getPatientOrPromotePerson(resolvedSurvivor.getId()), Arrays.asList(Context.getPatientService().getPatientOrPromotePerson(victim.getId())));
-                }
-                catch (Exception e) {
-	                // TODO Auto-generated catch block
-	                log.error("Error generated", e);
-	                return this.createErrorMessage("207", e.getMessage(), message);
-                }
-				
+				return this.createAck(message);
 			}
-			return this.createAck(message);
+			else if(message instanceof ADT_A40)
+			{
+				ADT_A40 adt = (ADT_A40)message;
+				
+				// Merge
+				for(int i = 0; i < adt.getPIDPD1MRGPV1Reps(); i++)
+				{
+					ADT_A40_PIDPD1MRGPV1 mrgPid = adt.getPIDPD1MRGPV1(i);
+	
+					// Resolve the survivor
+					Person resolvedSurvivor = this.resolvePersonFromIdentifiers(mrgPid.getPID().getAlternatePatientIDPID());
+					
+					// Person exists?
+					if(resolvedSurvivor == null )
+						return this.createErrorMessage("204", "Patient does not exist", adt);
+					
+					// Resolve the victim
+					Person victim = this.resolvePersonFromIdentifiers(mrgPid.getMRG().getPriorAlternatePatientID());
+					if(victim == null)
+						return this.createErrorMessage("204", "Patient in MRG does not exist", adt);
+					
+					// Merge the victim with survivor
+					try {
+		                this.m_mergeService.mergePatients(Context.getPatientService().getPatientOrPromotePerson(resolvedSurvivor.getId()), Arrays.asList(Context.getPatientService().getPatientOrPromotePerson(victim.getId())));
+	                }
+	                catch (Exception e) {
+		                // TODO Auto-generated catch block
+		                log.error("Error generated", e);
+		                return this.createErrorMessage("207", e.getMessage(), message);
+	                }
+					
+				}
+				return this.createAck(message);
+			}
+			else
+				return this.createErrorMessage("200", "Unsupported message type", message);
 		}
-		else
-			return this.createErrorMessage("200", "Unsupported message type", message);
+		catch(Exception e)
+		{
+			log.error(e);
+			return this.createErrorMessage("207", e.getMessage(), message);
+		}
+	}
+
+	/**
+	 * Resolve a person from the patient identifiers
+	 * @param patientIdentifierList
+	 * @return
+	 */
+	private Person resolvePersonFromIdentifiers(CX[] patientIdentifierList) {
+		for(CX id : patientIdentifierList)
+		{
+			PatientIdentifierType pidType = Context.getPatientService().getPatientIdentifierTypeByName(id.getAssigningAuthority().getUniversalID().getValue());
+			if(pidType == null)
+				continue; // skip
+			
+			List<Patient> candidatePatients = Context.getPatientService().getPatientsByIdentifier(id.getID().getValue(), false);
+			if(candidatePatients.size() != 1)
+				continue;
+			Patient pat = candidatePatients.get(0);
+			if(pat != null && 
+					pat.getPatientIdentifier(pidType) != null && 
+					pat.getPatientIdentifier(pidType).getId().equals(id.getID().getValue()))
+				return pat;
+		}
+		return null;
 	}
 
 	/**
@@ -148,7 +184,7 @@ public class PatientIdentityFeedHandler implements Application {
         try {
 	        terser.set("/MSH-10", UUID.randomUUID().toString());
 	        
-	        if(impl.getName() != null)
+	        if(impl != null && impl.getName() != null)
 	        	terser.set("/MSH-3", impl.getName());
 	        else 
 	        	terser.set("/MSH-3", "OHIE_OSHR"); // TODO: Find a better default or config place to put this
@@ -184,9 +220,9 @@ public class PatientIdentityFeedHandler implements Application {
 			patient = Context.getPatientService().getPatientOrPromotePerson(resolvedPerson.getId());
 
 		// Identifiers
-		for (CX id : pid.getAlternatePatientIDPID()) {
+		for (CX id : pid.getPatientIdentifierList()) {
 			
-			String assigningAuthority = id.getAssigningAuthority().getNamespaceID().getValue();
+			String assigningAuthority = id.getAssigningAuthority().getUniversalID().getValue();
 			String hl7PatientId = id.getID().getValue();
 			
 			log.debug("identifier has id=" + hl7PatientId + " assigningAuthority=" + assigningAuthority);
@@ -202,7 +238,7 @@ public class PatientIdentityFeedHandler implements Application {
 					pi.setIdentifier(hl7PatientId);
 					
 					// This is the ECID?
-					if(pit.getName().equals(this.m_cdaConfiguration.getEcidRoot()))
+					if(pit != null && pit.getName().equals(this.m_configuration.getEcidRoot()))
 						pi.setPreferred(true);
 					
 					// Get default location
@@ -233,15 +269,18 @@ public class PatientIdentityFeedHandler implements Application {
 		}
 		
 		// Names?
-		patient.getNames().clear();
-		for (XPN patientNameX : pid.getPatientName()) {
-			PersonName name = new PersonName();
-			name.setFamilyName(patientNameX.getFamilyLastName().getFamilyName().getValue());
-			name.setGivenName(patientNameX.getGivenName().getValue());
-			name.setMiddleName(patientNameX.getMiddleInitialOrName().getValue());
-			if(patientNameX.getNameTypeCode().getValue().equals("L"))
-				name.setPreferred(true);
-			patient.addName(name);
+		if(pid.getPatientName().length > 0)
+		{
+			patient.getNames().clear();
+			for (XPN patientNameX : pid.getPatientName()) {
+				PersonName name = new PersonName();
+				name.setFamilyName(patientNameX.getFamilyLastName().getFamilyName().getValue());
+				name.setGivenName(patientNameX.getGivenName().getValue());
+				name.setMiddleName(patientNameX.getMiddleInitialOrName().getValue());
+				if(patientNameX.getNameTypeCode().getValue().equals("L"))
+					name.setPreferred(true);
+				patient.addName(name);
+			}
 		}
 		
 		// Gender
@@ -260,7 +299,9 @@ public class PatientIdentityFeedHandler implements Application {
 		if (dateOfBirth == null || dateOfBirth.getTimeOfAnEvent() == null || dateOfBirth.getTimeOfAnEvent().getValue() == null) {
 			throw new HL7Exception("Missing birth date in an PID segment");
 		}
-		patient.setBirthdate(HL7Util.parseHL7Timestamp(dateOfBirth.getTimeOfAnEvent().getValue()));
+
+		
+		patient.setBirthdate(org.marc.everest.datatypes.TS.valueOf(dateOfBirth.getTimeOfAnEvent().getValue()).getDateValue().getTime());
 		
 		
 		Context.getPatientService().savePatient(patient);
@@ -288,27 +329,5 @@ public class PatientIdentityFeedHandler implements Application {
 		return retVal;
     }
 
-	/**
-	 * Convert v2.3.1 CX[] to v2.5 CX[]
-	 * Auto generated method comment
-	 * 
-	 * @param alternatePatientIDPID
-	 * @return
-	 */
-	private ca.uhn.hl7v2.model.v25.datatype.CX[] convertCxList(CX[] alternatePatientIDPID) {
-		ca.uhn.hl7v2.model.v25.datatype.CX[] retVal = new ca.uhn.hl7v2.model.v25.datatype.CX[alternatePatientIDPID.length];
-		for(int i = 0; i < retVal.length; i++)
-		{
-			ca.uhn.hl7v2.model.v25.datatype.CX cxv25 = new ca.uhn.hl7v2.model.v25.datatype.CX(alternatePatientIDPID[i].getMessage());
-			try {
-	            ca.uhn.hl7v2.util.DeepCopy.copy(alternatePatientIDPID[i], cxv25);
-	            retVal[i] = cxv25;
-            }
-            catch (DataTypeException e) {
-	            log.error("Error generated", e);
-            }
-		}
-		return retVal;
-    }
 	
 }

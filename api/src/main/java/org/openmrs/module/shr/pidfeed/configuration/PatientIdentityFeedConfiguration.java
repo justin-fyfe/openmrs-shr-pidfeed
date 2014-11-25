@@ -3,9 +3,6 @@ package org.openmrs.module.shr.pidfeed.configuration;
 import org.marc.everest.formatters.FormatterUtil;
 import org.openmrs.GlobalProperty;
 import org.openmrs.api.context.Context;
-import org.openmrs.module.shr.cdahandler.configuration.CdaHandlerConfiguration;
-
-import ca.uhn.hl7v2.llp.LowerLayerProtocol;
 
 /**
  * Configuration for the OnDemandDocument module
@@ -19,10 +16,16 @@ public final class PatientIdentityFeedConfiguration {
 	// Configuration constants
     public static final String PROP_LLP_PORT = "hl7.llp.port";
     public static final String PROP_LLP_TLS = "hl7.llp.tls";
-    
+    public static final String PROP_USER_NAME = "hl7.llp.user";
+    public static final String PROP_USER_PASS = "hl7.llp.pass";
+	public static final String PROP_ECID_ROOT = "shr.id.ecidRoot";
+	
     // Id regex
-    private Integer m_repositoryPort = 2100;
+    private Integer m_repositoryPort = 9100;
     private Boolean m_tls = false;
+    private String m_user = "admin";
+    private String m_password = "password";
+    private String m_defaultEcidRoot = "1.2.3.4.5.6.7.8";
     
 	// Private Ctor
 	private PatientIdentityFeedConfiguration()
@@ -68,6 +71,8 @@ public final class PatientIdentityFeedConfiguration {
     {
     	this.m_repositoryPort = this.getOrCreateGlobalProperty(PROP_LLP_PORT, this.m_repositoryPort);
     	this.m_tls = this.getOrCreateGlobalProperty(PROP_LLP_TLS, this.m_tls);
+    	this.m_user = this.getOrCreateGlobalProperty(PROP_USER_NAME, this.m_user);
+    	this.m_password = this.getOrCreateGlobalProperty(PROP_USER_PASS, this.m_password);
     }
 
     /**
@@ -86,4 +91,28 @@ public final class PatientIdentityFeedConfiguration {
 	public Boolean getTls() {
 		return this.m_tls;
     }
+
+	/**
+	 * Get user name of the user with which data should be import
+	 * @return
+	 */
+	public String getUserName() {
+		return this.m_user;
+	}
+
+	/**
+	 * Get the password of the user
+	 * @return
+	 */
+	public String getUserPassword() {
+		return this.m_password;
+	}
+
+	/**
+	 * Get the ecid root
+	 * @return
+	 */
+	public String getEcidRoot() {
+		return this.getOrCreateGlobalProperty(PROP_ECID_ROOT, this.m_defaultEcidRoot);
+	}
 }

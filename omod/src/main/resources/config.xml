@@ -12,12 +12,18 @@
 			${project.parent.description}
 	</description>
 
-	<activator>${project.parent.groupId}.shr.pid.PatientIdentityFeedActivator</activator>
+	<activator>${project.parent.groupId}.shr.pidfeed.PatientIdentityFeedActivator</activator>
 	
 	<!-- <updateURL>https://modules.openmrs.org/modules/download/@MODULE_ID@/update.rdf</updateURL> -->
 	<!-- /Base Module Properties -->
 	
 	<require_version>${openMRSVersion}</require_version>
+	
+	<!-- Required modules -->
+	<require_modules>
+		<require_module version="1.0-SNAPSHOT">org.openmrs.module.rheashradapter</require_module>
+		
+	</require_modules>
 	
 	<!-- Extensions -->
 	<!-- <extension>
@@ -48,6 +54,20 @@
 		<defaultValue>2100</defaultValue>
 		<description>
 			The port on which the HL7 LLP listener should run
+		</description>
+	</globalProperty>
+	<globalProperty>
+		<property>hl7.llp.user</property>
+		<defaultValue>admin</defaultValue>
+		<description>
+			The name of the user with which the LLP listener should create/update data
+		</description>
+	</globalProperty>
+	<globalProperty>
+		<property>hl7.llp.pass</property>
+		<defaultValue>password</defaultValue>
+		<description>
+			The password of the LLP user
 		</description>
 	</globalProperty>
 	<!-- /Required Global Properties -->

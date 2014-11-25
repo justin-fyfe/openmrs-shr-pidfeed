@@ -54,14 +54,13 @@
 			<artifactId>rheashradapter-api</artifactId>
 			<version>1.0-SNAPSHOT</version>
 			<type>jar</type>
+			<scope>provided</scope>
 		</dependency>
 		
-		<!--  CDA Import -->
 		<dependency>
-			<groupId>org.openmrs.module</groupId>
-			<artifactId>shr-cdahandler-api</artifactId>
-			<version>0.5.0</version>
-			<type>jar</type>
+			<groupId>org.marc.everest</groupId>
+			<artifactId>everest-core</artifactId>
+			<version>1.1.0</version>
 		</dependency>
 	</dependencies>
 	

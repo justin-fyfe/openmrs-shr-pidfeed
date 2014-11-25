@@ -1,5 +1,5 @@
 /**
- * The contents of this file are subject to the OpenMRS Public License
+' * The contents of this file are subject to the OpenMRS Public License
  * Version 1.0 (the "License"); you may not use this file except in
  * compliance with the License. You may obtain a copy of the License at
  * http://license.openmrs.org
@@ -17,6 +17,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openmrs.api.context.Context;
 import org.openmrs.module.Activator;
 import org.openmrs.module.ModuleActivator;
 import org.openmrs.module.shr.pidfeed.mllp.MllpCommunicationHost;
@@ -41,7 +42,9 @@ public class PatientIdentityFeedActivator implements ModuleActivator {
 	 */
 	public void started() {
 		try {
+			log.debug("Starting HL7 LLP Service");
 	        this.m_server.open();
+	        
         }
         catch (IOException e) {
 	        // TODO Auto-generated catch block
@@ -55,6 +58,7 @@ public class PatientIdentityFeedActivator implements ModuleActivator {
 	 */
 	public void stopped() {
 		try {
+			log.debug("Stopping HL7 LLP Service");
 	        this.m_server.close();
         }
         catch (IOException e) {

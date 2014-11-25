@@ -24,7 +24,19 @@
 	<bean class="org.openmrs.hl7.impl.HL7ServiceImpl" factory-method="getInstance">
 		<property name="HL7Handlers">
 			<map>
-				<entry key="ADT_PIF">
+				<entry key="ADT_A01">
+					<bean class="org.openmrs.module.shr.pidfeed.hl7.PatientIdentityFeedHandler" />
+				</entry>
+				<entry key="ADT_A04">
+					<bean class="org.openmrs.module.shr.pidfeed.hl7.PatientIdentityFeedHandler" />
+				</entry>
+				<entry key="ADT_A08">
+					<bean class="org.openmrs.module.shr.pidfeed.hl7.PatientIdentityFeedHandler" />
+				</entry>
+				<entry key="ADT_A02">
+					<bean class="org.openmrs.module.shr.pidfeed.hl7.PatientIdentityFeedHandler" />
+				</entry>
+				<entry key="ADT_A40">
 					<bean class="org.openmrs.module.shr.pidfeed.hl7.PatientIdentityFeedHandler" />
 				</entry>
 			</map>
